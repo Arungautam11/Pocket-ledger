@@ -1,0 +1,41 @@
+{% load static %}<!doctype html>
+<html lang="en" data-theme="light" data-currency="{{ currency }}">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Pocket Ledger{% endblock %} · Pocket Ledger</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <script>document.documentElement.dataset.theme=localStorage.getItem('pocket-ledger-theme')||'light'</script>
+  {% block head %}{% endblock %}
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <a class="brand" href="{% url 'dashboard' %}"><span class="brand-mark">a</span><span>Arun<span class="brand-muted">Ledger</span></span></a>
+    <div class="nav-label">WORKSPACE</div>
+    <nav class="main-nav">
+      <a class="nav-link {% if active == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}"><span>◫</span> Dashboard</a>
+      <a class="nav-link {% if active == 'transactions' %}active{% endif %}" href="{% url 'transactions' %}"><span>↔</span> Transactions</a>
+      <a class="nav-link {% if active == 'expenses' %}active{% endif %}" href="{% url 'expenses' %}"><span>↘</span> Expenses</a>
+      <a class="nav-link {% if active == 'incomes' %}active{% endif %}" href="{% url 'income' %}"><span>↗</span> Income</a>
+      <a class="nav-link {% if active == 'reports' %}active{% endif %}" href="{% url 'reports' %}"><span>▥</span> Reports</a>
+    </nav>
+    <div class="nav-label nav-gap">PREFERENCES</div>
+    <nav class="main-nav">
+      <a class="nav-link {% if active == 'categories' %}active{% endif %}" href="{% url 'categories' %}"><span>◈</span> Categories</a>
+      <a class="nav-link {% if active == 'settings' %}active{% endif %}" href="{% url 'settings' %}"><span>⚙</span> Settings</a>
+    </nav>
+    <div class="sidebar-bottom"><div class="privacy-icon">✦</div><strong>Your money, your space.</strong><p>Your finance data stays on this device.</p></div>
+  </aside>
+  <main class="main-area">
+    <header class="topbar"><button class="mobile-menu" id="mobile-menu" aria-label="Toggle navigation">☰</button><div class="breadcrumb">Personal finances <span>/</span> {% block page_name %}Dashboard{% endblock %}</div><div class="top-actions"><span class="local-badge"><i></i> LOCAL & PRIVATE</span><button class="theme-toggle" id="theme-toggle" aria-label="Toggle light or dark theme"><span class="theme-icon">☾</span><span class="theme-text">Dark mode</span></button><div class="avatar">Arun</div></div></header>
+    <section class="content">
+      {% if messages %}<div class="toast-stack">{% for message in messages %}<div class="toast {{ message.tags }}">{{ message }}</div>{% endfor %}</div>{% endif %}
+      {% block content %}{% endblock %}
+    </section>
+  </main>
+</div>
+<script src="{% static 'js/app.js' %}"></script>
+{% block scripts %}{% endblock %}
+</body></html>
