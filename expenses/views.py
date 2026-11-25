@@ -3,6 +3,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -19,10 +20,12 @@ DEFAULTS = {
 }
 
 
-def seed_categories():
+def seed_categories(user):
+    if Category.objects.filter(user=user).exists():
+        return
     for kind, names in DEFAULTS.items():
         for name in names:
-            Category.objects.get_or_create(name=name, kind=kind, defaults={"is_default": True})
+            Category.objects.get_or_create(user=user, name=name, kind=kind, defaults={"is_default": True})
 
 
 def money(queryset, kind):
@@ -30,7 +33,7 @@ def money(queryset, kind):
 
 
 def common(request, **extra):
-    current = AppSettings.current()
+    current = AppSettings.current(request.user)
     symbols = {"INR": "₹", "USD": "$", "EUR": "€", "GBP": "£"}
     return {
         "currency": current.currency,
@@ -40,8 +43,9 @@ def common(request, **extra):
     }
 
 
+@login_required
 def dashboard(request):
-    seed_categories()
+    seed_categories(request.user)
     today = timezone.localdate()
     try:
         year = int(request.GET.get("year", today.year))
@@ -50,8 +54,8 @@ def dashboard(request):
             raise ValueError
     except ValueError:
         year, month = today.year, today.month
-    month_tx = Transaction.objects.filter(date__year=year, date__month=month).select_related("category")
-    all_tx = Transaction.objects.all()
+    month_tx = Transaction.objects.filter(user=request.user, date__year=year, date__month=month).select_related("category")
+    all_tx = Transaction.objects.filter(user=request.user).select_related("category")
     daily = list(month_tx.values("date", "kind").annotate(total=Sum("amount")).order_by("date"))
     daily_map = {}
     for item in daily:
@@ -69,8 +73,9 @@ def dashboard(request):
     return render(request, "dashboard.html", context)
 
 
+@login_required
 def transaction_list(request, kind=None):
-    qs = Transaction.objects.select_related("category")
+    qs = Transaction.objects.filter(user=request.user).select_related("category")
     if kind in ("expense", "income"):
         qs = qs.filter(kind=kind)
     search = request.GET.get("q", "").strip()
@@ -94,20 +99,23 @@ def transaction_list(request, kind=None):
         active=(kind + "s") if kind else "transactions",
         rows=qs,
         kind=kind,
-        categories=Category.objects.filter(kind=kind) if kind else Category.objects.all(),
+        categories=Category.objects.filter(user=request.user, kind=kind) if kind else Category.objects.filter(user=request.user),
         filters={"q": search, "category": category, "start": start, "end": end},
     )
     return render(request, "transactions/list.html", context)
 
 
+@login_required
 def transaction_form(request, kind, transaction_id=None):
     if kind not in ("expense", "income"):
         return redirect("transactions")
-    seed_categories()
-    instance = get_object_or_404(Transaction, pk=transaction_id, kind=kind) if transaction_id else None
-    form = TransactionForm(request.POST or None, instance=instance, kind=kind)
+    seed_categories(request.user)
+    instance = get_object_or_404(Transaction, pk=transaction_id, kind=kind, user=request.user) if transaction_id else None
+    form = TransactionForm(request.POST or None, instance=instance, kind=kind, user=request.user)
     if request.method == "POST" and form.is_valid():
-        form.save()
+        transaction = form.save(commit=False)
+        transaction.user = request.user
+        transaction.save()
         messages.success(request, f"{kind.title()} saved successfully.")
         return redirect("expenses" if kind == "expense" else "income")
     return render(
@@ -117,32 +125,38 @@ def transaction_form(request, kind, transaction_id=None):
     )
 
 
+@login_required
 @require_POST
 def transaction_delete(request, transaction_id):
-    transaction = get_object_or_404(Transaction, pk=transaction_id)
+    transaction = get_object_or_404(Transaction, pk=transaction_id, user=request.user)
     kind = transaction.kind
     transaction.delete()
     messages.success(request, "Transaction deleted.")
     return redirect("expenses" if kind == "expense" else "income")
 
 
-def categories(request):
-    seed_categories()
-    form = CategoryForm(request.POST or None)
+@login_required
+def categories(request, category_id=None):
+    seed_categories(request.user)
+    instance = get_object_or_404(Category, pk=category_id, user=request.user) if category_id else None
+    form = CategoryForm(request.POST or None, instance=instance, user=request.user)
     if request.method == "POST" and form.is_valid():
-        form.save()
-        messages.success(request, "Category added.")
+        category = form.save(commit=False)
+        category.user = request.user
+        category.save()
+        messages.success(request, "Category updated." if instance else "Category added.")
         return redirect("categories")
     return render(
         request,
         "categories.html",
-        common(request, active="categories", form=form, categories=Category.objects.all()),
+        common(request, active="categories", form=form, categories=Category.objects.filter(user=request.user), editing=bool(instance)),
     )
 
 
+@login_required
 @require_POST
 def category_delete(request, category_id):
-    category = get_object_or_404(Category, pk=category_id)
+    category = get_object_or_404(Category, pk=category_id, user=request.user)
     if category.is_default:
         messages.error(request, "Default categories cannot be removed.")
     elif category.transactions.exists():
@@ -153,8 +167,9 @@ def category_delete(request, category_id):
     return redirect("categories")
 
 
+@login_required
 def settings_page(request):
-    prefs = AppSettings.current()
+    prefs = AppSettings.current(request.user)
     form = PreferencesForm(request.POST or None, instance=prefs)
     if request.method == "POST" and form.is_valid():
         form.save()
@@ -163,6 +178,7 @@ def settings_page(request):
     return render(request, "settings.html", common(request, active="settings", form=form))
 
 
+@login_required
 def reports(request):
     period = request.GET.get("period", "month")
     today = timezone.localdate()
@@ -175,7 +191,7 @@ def reports(request):
     else:
         period = "month"
         start, end = today.replace(day=1), today
-    qs = Transaction.objects.filter(date__range=(start, end)).select_related("category")
+    qs = Transaction.objects.filter(user=request.user, date__range=(start, end)).select_related("category")
     grouped = list(qs.filter(kind="expense").values("category__name").annotate(total=Sum("amount")).order_by("category__name"))
     return render(
         request,
@@ -195,8 +211,9 @@ def reports(request):
     )
 
 
+@login_required
 def export_csv(request):
-    qs = Transaction.objects.select_related("category").order_by("date", "id")
+    qs = Transaction.objects.filter(user=request.user).select_related("category").order_by("date", "id")
     kind = request.GET.get("kind")
     if kind in ("expense", "income"):
         qs = qs.filter(kind=kind)

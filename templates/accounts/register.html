@@ -1,0 +1,31 @@
+{% load static %}<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Create account · Pocket Ledger</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <script>document.documentElement.dataset.theme=localStorage.getItem('pocket-ledger-theme')||'light'</script>
+</head>
+<body class="auth-page">
+  <main class="auth-card">
+    <a class="auth-brand" href="{% url 'register' %}"><span class="brand-mark">a</span><span>Pocket<span class="brand-muted">Ledger</span></span></a>
+    <div class="eyebrow">YOUR PERSONAL FINANCE SPACE</div>
+    <h1>Create your account<span class="heading-dot">.</span></h1>
+    <p class="auth-intro">Start keeping your income and expenses organized in one place.</p>
+    {% if messages %}<div class="auth-messages">{% for message in messages %}<div class="toast {{ message.tags }}">{{ message }}</div>{% endfor %}</div>{% endif %}
+    <form method="post" class="auth-form" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}<div class="form-errors">{{ form.non_field_errors }}</div>{% endif %}
+      {% for field in form %}<div class="form-field">
+        {{ field.label_tag }}
+        {% if field.name == 'password1' or field.name == 'password2' %}<div class="password-input">{{ field }}<button class="password-toggle" type="button" aria-label="Show password" data-password-toggle="{{ field.id_for_label }}">Show</button></div>{% else %}{{ field }}{% endif %}
+        {% for error in field.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+      </div>{% endfor %}
+      <button class="button button-primary auth-submit" type="submit">Create account</button>
+    </form>
+    <p class="auth-footer">Already have an account? <a href="{% url 'login' %}">Sign in</a></p>
+    <button type="button" id="theme-toggle" class="theme-toggle auth-theme"><span class="theme-icon">☾</span><span class="theme-text">Dark mode</span></button>
+  </main>
+  <script src="{% static 'js/app.js' %}"></script>
+  <script src="{% static 'js/accounts.js' %}"></script>
+</body></html>

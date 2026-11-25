@@ -1,0 +1,32 @@
+{% load static %}<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in · Pocket Ledger</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <script>document.documentElement.dataset.theme=localStorage.getItem('pocket-ledger-theme')||'light'</script>
+</head>
+<body class="auth-page">
+  <main class="auth-card">
+    <a class="auth-brand" href="{% url 'login' %}"><span class="brand-mark">a</span><span>Pocket<span class="brand-muted">Ledger</span></span></a>
+    <div class="eyebrow">WELCOME BACK</div>
+    <h1>Sign in<span class="heading-dot">.</span></h1>
+    <p class="auth-intro">Use your email and password to open your personal ledger.</p>
+    {% if messages %}<div class="auth-messages">{% for message in messages %}<div class="toast {{ message.tags }}">{{ message }}</div>{% endfor %}</div>{% endif %}
+    <form method="post" class="auth-form" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}<div class="form-errors">{{ form.non_field_errors }}</div>{% endif %}
+      {% for field in form %}{% if field.name != 'remember_me' %}<div class="form-field">
+        {{ field.label_tag }}<div class="password-input">{{ field }}{% if field.name == 'password' %}<button class="password-toggle" type="button" aria-label="Show password" data-password-toggle="{{ field.id_for_label }}">Show</button>{% endif %}</div>
+        {% for error in field.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+      </div>{% endif %}{% endfor %}
+      <div class="login-options"><label>{{ form.remember_me }} {{ form.remember_me.label }}</label><a href="{% url 'password_reset' %}">Forgot password?</a></div>
+      <button class="button button-primary auth-submit" type="submit">Sign in</button>
+      {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+    </form>
+    <p class="auth-footer">New to Pocket Ledger? <a href="{% url 'register' %}">Create an account</a></p>
+    <button type="button" id="theme-toggle" class="theme-toggle auth-theme"><span class="theme-icon">☾</span><span class="theme-text">Dark mode</span></button>
+  </main>
+  <script src="{% static 'js/app.js' %}"></script>
+  <script src="{% static 'js/accounts.js' %}"></script>
+</body></html>

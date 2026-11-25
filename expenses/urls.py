@@ -15,6 +15,7 @@ urlpatterns = [
     path("reports/", views.reports, name="reports"),
     path("reports/export/", views.export_csv, name="export_csv"),
     path("categories/", views.categories, name="categories"),
+    path("categories/<int:category_id>/edit/", views.categories, name="category_edit"),
     path("categories/<int:category_id>/delete/", views.category_delete, name="category_delete"),
     path("settings/", views.settings_page, name="settings"),
 ]
