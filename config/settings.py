@@ -10,7 +10,7 @@ if not SECRET_KEY:
     if not DEBUG:
         raise ImproperlyConfigured("DJANGO_SECRET_KEY must be configured when DEBUG is false.")
     SECRET_KEY = "django-insecure-local-only-change-me"
-ALLOWED_HOSTS = [host.strip() for host in os.environ.get("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost").split(",") if host.strip()]
+ALLOWED_HOSTS = [host.strip() for host in os.environ.get("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost,arungautam11.pythonanywhere.com").split(",") if host.strip()]
 if not DEBUG and not ALLOWED_HOSTS:
     raise ImproperlyConfigured("Set DJANGO_ALLOWED_HOSTS when DEBUG is false.")
 
